@@ -1,0 +1,146 @@
+% Source - https://tex.stackexchange.com/a/457624
+% Posted by user121799
+% Retrieved 2026-03-17, License - CC BY-SA 4.0
+
+\documentclass[tikz,border=8mm]{standalone}
+\usetikzlibrary{shapes.geometric,shapes.symbols,fit,positioning,shadows}
+% https://tex.stackexchange.com/a/12039/121799
+\makeatletter
+% https://tex.stackexchange.com/a/103691/121799
+\pgfdeclareshape{document}{
+\inheritsavedanchors[from=rectangle] % this is nearly a rectangle
+\inheritanchorborder[from=rectangle]
+\inheritanchor[from=rectangle]{center}
+\inheritanchor[from=rectangle]{north}
+\inheritanchor[from=rectangle]{north east}
+\inheritanchor[from=rectangle]{north west}
+\inheritanchor[from=rectangle]{south}
+\inheritanchor[from=rectangle]{south east}
+\inheritanchor[from=rectangle]{south west}
+\inheritanchor[from=rectangle]{west}
+\inheritanchor[from=rectangle]{east}
+\backgroundpath{%
+\southwest \pgf@xa=\pgf@x \pgf@ya=\pgf@y
+\northeast \pgf@xb=\pgf@x \pgf@yb=\pgf@y
+\pgf@xc=\pgf@xb \advance\pgf@xc by-5pt % this should be a parameter
+\pgf@yc=\pgf@ya \advance\pgf@yc by5pt
+\pgfpathmoveto{\pgfpoint{\pgf@xa}{\pgf@ya}}
+\pgfpathlineto{\pgfpoint{\pgf@xa}{\pgf@yb}}
+\pgfpathlineto{\pgfpoint{\pgf@xb}{\pgf@yb}}
+\pgfpathlineto{\pgfpoint{\pgf@xb}{\pgf@yc}}
+\pgfpathlineto{\pgfpoint{\pgf@xc}{\pgf@ya}}
+\pgfpathclose
+% add little corner
+\pgfpathmoveto{\pgfpoint{\pgf@xc}{\pgf@ya}}
+\pgfpathlineto{\pgfpoint{\pgf@xc}{\pgf@yc}}
+\pgfpathlineto{\pgfpoint{\pgf@xb}{\pgf@yc}}
+\pgfpathclose
+}
+}
+\makeatother
+
+\begin{document}
+
+\tikzset{doc/.style={document,fill=blue!10,draw,thin,minimum
+height=1.2cm,align=center},
+pics/.cd,
+pack/.style={code={%
+\draw[fill=blue!50,opacity=0.2] (0,0) -- (0.5,-0.25) -- (0.5,0.25) -- (0,0.5) -- cycle;
+\draw[fill=blue!50,opacity=0.2] (0,0) -- (-0.5,-0.25) -- (-0.5,0.25) -- (0,0.5) -- cycle;
+\draw[fill=blue!60,opacity=0.2] (0,0) -- (-0.5,-0.25) -- (0,-0.5) -- (0.5,-0.25) -- cycle;
+\draw[fill=blue!60] (0,0) -- (0.25,0.125) -- (0,0.25) -- (-0.25,0.125) -- cycle;
+\draw[fill=blue!50] (0,0) -- (0.25,0.125) -- (0.25,-0.125) -- (0,-0.25) -- cycle;
+\draw[fill=blue!50] (0,0) -- (-0.25,0.125) -- (-0.25,-0.125) -- (0,-0.25) -- cycle;
+\draw[fill=blue!50,opacity=0.2] (0,-0.5) -- (0.5,-0.25) -- (0.5,0.25) -- (0,0) -- cycle;
+ \draw[fill=blue!50,opacity=0.2] (0,-0.5) -- (-0.5,-0.25) -- (-0.5,0.25) -- (0,0) -- cycle;
+\draw[fill=blue!60,opacity=0.2] (0,0.5) -- (-0.5,0.25) -- (0,0) -- (0.5,0.25) -- cycle;
+}}}
+
+\begin{tikzpicture}[
+    font=\sffamily,
+    every label/.append style={font=\small\sffamily,align=center}]
+
+% hardware layer nodes
+\node[doc,fill=red!10]
+    (Distance)
+    {Ultrasonic\\Distance\\(5V)};
+\node[right=2cm of Distance,doc,fill=blue!10]
+    (Receiver)
+    {Break Beam\\Receiver};
+\node[right=2cm of Receiver,doc,fill=blue!10]
+    (Emitter)
+    {Break Beam\\Emitter};
+\node[right=2cm of Emitter,doc,fill=blue!10]
+    (LEDs)
+    {LEDs\\};
+\node[right=2cm of LEDs,doc,fill=blue!10]
+    (Buzzer)
+    {Passive\\Buzzer};
+
+% BBB pin layer nodes
+\node[below=4cm of Distance,doc,fill=blue!10]
+    (Ground)
+    {Ground};
+\node[below=4cm of Receiver,doc,fill=blue!10]
+    (Power)
+    {Power};
+\node[below=4cm of Emitter,doc,fill=blue!10]
+    (GPIO_In)
+    {GPIO In};
+\node[below=4cm of LEDs,doc,fill=blue!10]
+    (GPIO_Out)
+    {GPIO Out};
+\node[below=4cm of Buzzer,doc,fill=blue!10]
+    (PWM)
+    {PWM};
+
+% BBB layer
+\node[below=2cm of GPIO_In,doc,fill=blue!10]
+    (BBB)
+    {BBB};
+
+% Host layer
+\node[below=2cm of BBB,doc,fill=blue!10]
+    (Host)
+    {Host};
+
+% links between layers 1 and 2
+\draw (Distance) -- (Ground);
+\draw (Distance) -- (Power);
+\draw (Distance) -- (GPIO_In);
+\draw (Distance) -- (GPIO_Out);
+\draw (Receiver) -- (Ground);
+\draw (Receiver) -- (Power);
+\draw (Receiver) -- (GPIO_In);
+\draw (Emitter) -- (Ground);
+\draw (Emitter) -- (Power);
+\draw (LEDs) -- (Ground);
+\draw (LEDs) -- (GPIO_Out);
+\draw (Buzzer) -- (Ground);
+\draw (Buzzer) -- (PWM);
+\draw (BBB) -- (Ground);
+\draw (BBB) -- (Power);
+\draw (BBB) -- (GPIO_In);
+\draw (BBB) -- (GPIO_Out);
+\draw (BBB) -- (PWM);
+\draw (BBB) -- node[right]{USB}(Host);
+
+
+\node[draw,dashed,rounded corners,
+    fit=(Distance)(Receiver)(Emitter),
+    inner sep=10pt,label={left:{Sensors}}]
+    (fit1)
+    {};
+\node[draw,dashed,rounded corners,
+    fit=(LEDs)(Buzzer),
+    inner sep=10pt,label={left:{Outputs}}]
+    (fit2)
+    {};
+\node[draw,dashed,rounded corners,
+    fit=(Ground)(Power)(GPIO_In)(GPIO_Out)(PWM),
+    inner sep=10pt,label={left:{BBB\\Pins}}]
+    (fit3)
+    {};
+
+\end{tikzpicture}
+\end{document}

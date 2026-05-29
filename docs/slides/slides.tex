@@ -1,0 +1,300 @@
+% Copyright (c) 2022 by Lars Spreng
+% This work is licensed under the Creative Commons Attribution 4.0 International License. 
+% To view a copy of this license, visit http://creativecommons.org/licenses/by/4.0/ or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% You can add your packages and commands to the loadslides.tex file. 
+% The files in the folder "styles" can be modified to change the layout and design of your slides.
+% I have included examples on how to use the template below. 
+% Some of these examples are taken from the Metropolis template.
+%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+\documentclass[
+11pt,notheorems,hyperref={pdfauthor=whatever}
+]{beamer}
+
+\input{loadslides.tex} % Loads packages and some defined commands
+
+\title[
+% Text entered here will appear in the bottom middle
+]{Project Overview}
+
+\subtitle{\textbf{Air Piano}}
+
+\author[
+% Text entered here will appear in the bottom left corner
+]{
+    N. Bacon, M. Tang, A. Taylor
+}
+
+\begin{document}
+
+% Generate title page
+{
+\setbeamertemplate{footline}{} 
+\begin{frame}
+  \titlepage
+\end{frame}
+}
+\addtocounter{framenumber}{-1}
+
+\section{Problem Statement and Success Criteria}
+\begin{frame}
+
+\begin{block}{Project Description}
+\begin{itemize}
+    \item Our project is the \textbf{Air Piano}, a
+    contact-less digital instrument. Users play
+    notes by making motions with their hand
+    in front of a break beam sensor. The pitch of each
+    note is determined by the distance from the
+    device to their hand as measured by an ultrasonic
+    distance sensor. Like a classical piano, pitches
+    are quantized based on the standard 12-TET tuning
+    system. To increase playability, we chose to limit
+    the device to eight notes, forming a C major scale.
+    Finally, the device includes a real-time LED
+    display indicating which pitch is currently
+    to be played based on the distance sensor.
+\end{itemize}
+\end{block}
+
+\begin{block}{Success Criteria}
+\begin{enumerate}
+    \item The device plays a single note for a short
+        time (configurable) on the buzzer
+        only when a hand moves downwards in front of it.
+    \item The pitch of the note is lower when the hand
+        is closer in horizontal distance to the device
+        and higher when it is further away. The pitches
+        played by the device will range from C4 to C5.
+    \item The LED display on the device correctly
+    displays the note that would be played should the
+    user lower the hand closest to the device at that
+    moment.
+    \item The timing requirements for the device are
+        met.
+\end{enumerate}
+\end{block}
+
+\end{frame}
+
+\section{Hardware}
+\begin{frame}
+
+\begin{block}{SBC Choice}
+\begin{itemize}
+    \item Beaglebone Black
+\end{itemize}
+\end{block}
+
+\begin{block}{Electronics Kit Components}
+\begin{itemize}
+    \item Breadboard
+    \item Jumper wires
+    \item Passive buzzer
+    \item LEDs
+\end{itemize}
+\end{block}
+
+\begin{block}{Add-On Sensors}
+\begin{itemize}
+    \item IR break beam sensor
+    \item HC-SR04 ultrasonic distance sensor
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+\section{Requirements}
+\begin{frame}
+
+\begin{block}{Measurable Timing Requirements}
+\begin{enumerate}
+    \item On note-down event as measured by the break
+        beam sensor, audio output must begin
+        with 10ms worst-case.
+    \item On note-change event as measured by the
+        distance sensor, the LED display must begin
+        updating within 100ms worst-case.
+    \item Break beam sensor is to be sampled at 100Hz
+        with jitter $\pm$ 1ms.
+    \item Distance sensor is to be sampled at 30Hz
+        with jitter $\pm$ 1ms.
+\end{enumerate}
+\begin{itemize}
+    \item \emph{See \cite{wessel_wright_2002}}
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+\begin{frame}
+
+\begin{block}{Periodic Tasks}
+\begin{enumerate}
+    \item Take break beam measurements every 10ms (100Hz)
+    \item Take distance measurements every 33ms (30Hz)
+    \item Update LED display every 50ms (20Hz)
+    \item Write logs every 100 ms (10 Hz)
+\end{enumerate}
+\end{block}
+
+\begin{block}{Asynchronous Task}
+\begin{itemize}
+    \item Upon beam break detection, play current
+        note within 10ms.
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+\section{Architecture}
+\begin{frame}
+
+\begin{block}{Task Architecture}
+\begin{table}
+\small
+\begin{tabular}{@{} lll @{}}
+\toprule
+\textbf{Task Name} & \textbf{Priority} & \textbf{Responsibilities}\\
+\midrule
+Beam Sensor & 90 & Detects break beam being broken and
+    plays the note determined by distance \\
+    &&when triggered.\\
+Distance Sensor & 70 & Measures distance from sensor and
+    calculates corresponding note.\\
+Display Updater & 60 & Continuously displays the current note
+    indicated by the distance sensor.\\
+Console & 40 & Reads special commands from console input.\\
+Logger & 30 & Outputs both real-time updates to console output
+    as well as logs to file.\\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{block}
+
+\begin{block}{Task Communication}
+\begin{itemize}
+    \item The Distance Sensor will continuously update
+        a shared value with the current note that
+        corresponds to the distance measurement. This
+        allows the Display Updater and the Beam Sensor
+        to read this shared value to quickly
+        play or display the note. The data will be
+        protected by a lock.
+    \item Tasks will communicate with the Logger via
+        buffers protected by a lock. The logger will
+        only hold onto the lock while copying data to
+        its own memory.
+    \item The safe state will be protected by
+        a lock, and different tasks will update it based
+        on their specific failure-detection criteria.
+\end{itemize}
+\end{block}
+
+\end{frame}
+\begin{frame}
+
+\begin{block}{Safe-State Behavior}
+\begin{itemize}
+    \item The safe-state behavior of the Air Piano
+        will turn off all LEDs and output no sound.
+        This will signal that something is wrong and
+        prevent annoyance from an indefinitely
+        held note.
+    \item If more than 10 beam breaks are detected
+        within one
+        second, the safe state will be entered, as this
+        indicates a possible sensor or logical
+        malfunction.
+    \item If the distance sensor detects a value
+        outside of the playable note range, no audio
+        will be produced, but the device will not enter
+        the safe state. If the distance sensor value is
+        clearly outside of the sensor's own range,
+        the safe state will be entered.
+    \item To exit the safe state, an admin will enter
+        a command on the console.
+    \begin{itemize}
+        \item Admins may also manually enter the safe
+        state via console command.
+    \end{itemize}
+
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+\section{Tests and Measurements}
+\begin{frame}
+
+\begin{block}{Timing Data}
+\begin{enumerate}
+    \item Capture timestamps for both beam breaks
+        and audio playback to ensure deadlines are
+        met. Log to file for review and testing.
+    \item Also record captured distance with notes
+        played to verify sensor logic and overall
+        functionality. Store in file for review and
+        testing.
+\end{enumerate}
+\end{block}
+
+\begin{block}{Boundary and Load Cases}
+\begin{enumerate}
+    \item Test with high sensor load (8 beam break
+        events per second) to verify deadlines are met
+        and functionality is retained.
+    \item Test with multiple objects around the sensor
+        such as people walking in the background to
+        ensure functionality isn't impeded by unwanted
+        interference (no spurious note playback
+        events).
+    % \item Simulate slow tasks with artificial
+    %     delays, making sure the rest of the system
+    %     functions as described. The slowing of low-priority
+    %     tasks should not interfere with high-priority
+    %     tasks.
+    \item Test with high CPU load by running other
+        processes in the background.
+\end{enumerate}
+\end{block}
+
+\end{frame}
+
+\begin{frame}
+
+\begin{block}{Base Timing Measurements}
+\begin{itemize}
+    \item While most deadlines were met, our measurements
+    showed that the system occasionally missed deadlines,
+    even for the highest priority tasks.
+    \item Our measurements indicate very low latency
+    to output the note once detected, with worst case
+    latency less than 1ms. Likewise, the latency for
+    the display was always less than 100ms.
+\end{itemize}
+\end{block}
+
+\begin{block}{Load Conditions}
+\begin{itemize}
+    \item By simulating 8 beam break events per second,
+    we confirmed that the system functioned as normal.
+    \item From ad-hoc experiments, we determined that
+    noise from the external environment can
+    affect the operation of the device (e.g. objects
+    near the distance sensor).
+    \item At 100\% CPU load, we found our timing data
+        to be comparable to the baseline.
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+\begin{frame}[allowframebreaks]{References}
+    \printbibliography
+\end{frame}
+
+\end{document}

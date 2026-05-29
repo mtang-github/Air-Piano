@@ -1,0 +1,154 @@
+% Source - https://tex.stackexchange.com/a/457624
+% Posted by user121799
+% Retrieved 2026-03-17, License - CC BY-SA 4.0
+
+\documentclass[tikz,border=8mm]{standalone}
+\usetikzlibrary{shapes.geometric,shapes.symbols,fit,positioning,shadows}
+% https://tex.stackexchange.com/a/12039/121799
+\makeatletter
+% https://tex.stackexchange.com/a/103691/121799
+\pgfdeclareshape{document}{
+\inheritsavedanchors[from=rectangle] % this is nearly a rectangle
+\inheritanchorborder[from=rectangle]
+\inheritanchor[from=rectangle]{center}
+\inheritanchor[from=rectangle]{north}
+\inheritanchor[from=rectangle]{north east}
+\inheritanchor[from=rectangle]{north west}
+\inheritanchor[from=rectangle]{south}
+\inheritanchor[from=rectangle]{south east}
+\inheritanchor[from=rectangle]{south west}
+\inheritanchor[from=rectangle]{west}
+\inheritanchor[from=rectangle]{east}
+\backgroundpath{%
+\southwest \pgf@xa=\pgf@x \pgf@ya=\pgf@y
+\northeast \pgf@xb=\pgf@x \pgf@yb=\pgf@y
+\pgf@xc=\pgf@xb \advance\pgf@xc by-5pt % this should be a parameter
+\pgf@yc=\pgf@ya \advance\pgf@yc by5pt
+\pgfpathmoveto{\pgfpoint{\pgf@xa}{\pgf@ya}}
+\pgfpathlineto{\pgfpoint{\pgf@xa}{\pgf@yb}}
+\pgfpathlineto{\pgfpoint{\pgf@xb}{\pgf@yb}}
+\pgfpathlineto{\pgfpoint{\pgf@xb}{\pgf@yc}}
+\pgfpathlineto{\pgfpoint{\pgf@xc}{\pgf@ya}}
+\pgfpathclose
+% add little corner
+\pgfpathmoveto{\pgfpoint{\pgf@xc}{\pgf@ya}}
+\pgfpathlineto{\pgfpoint{\pgf@xc}{\pgf@yc}}
+\pgfpathlineto{\pgfpoint{\pgf@xb}{\pgf@yc}}
+\pgfpathclose
+}
+}
+\makeatother
+
+\begin{document}
+
+\tikzset{doc/.style={document,fill=blue!10,draw,thin,minimum
+height=1.2cm,align=center},
+pics/.cd,
+pack/.style={code={%
+\draw[fill=blue!50,opacity=0.2] (0,0) -- (0.5,-0.25) -- (0.5,0.25) -- (0,0.5) -- cycle;
+\draw[fill=blue!50,opacity=0.2] (0,0) -- (-0.5,-0.25) -- (-0.5,0.25) -- (0,0.5) -- cycle;
+\draw[fill=blue!60,opacity=0.2] (0,0) -- (-0.5,-0.25) -- (0,-0.5) -- (0.5,-0.25) -- cycle;
+\draw[fill=blue!60] (0,0) -- (0.25,0.125) -- (0,0.25) -- (-0.25,0.125) -- cycle;
+\draw[fill=blue!50] (0,0) -- (0.25,0.125) -- (0.25,-0.125) -- (0,-0.25) -- cycle;
+\draw[fill=blue!50] (0,0) -- (-0.25,0.125) -- (-0.25,-0.125) -- (0,-0.25) -- cycle;
+\draw[fill=blue!50,opacity=0.2] (0,-0.5) -- (0.5,-0.25) -- (0.5,0.25) -- (0,0) -- cycle;
+ \draw[fill=blue!50,opacity=0.2] (0,-0.5) -- (-0.5,-0.25) -- (-0.5,0.25) -- (0,0) -- cycle;
+\draw[fill=blue!60,opacity=0.2] (0,0.5) -- (-0.5,0.25) -- (0,0) -- (0.5,0.25) -- cycle;
+}}}
+
+\begin{tikzpicture}[
+    font=\sffamily,
+    every label/.append style={font=\small\sffamily,align=center}]
+
+% I/O layer nodes
+\node[doc,fill=red!10]
+    (GPIO)
+    {GPIO\\Interface\\(Mutex)};
+\node[right=2cm of GPIO,doc,fill=blue!10]
+    (PWM)
+    {PWM\\Interface};
+\node[right=2cm of PWM,doc,fill=blue!10]
+    (Console)
+    {Console};
+
+% I/O thread layer nodes
+\node[below left=3cm and 2cm of GPIO,doc,fill=blue!10]
+    (BeamThread)
+    {Beam\\Thread};
+\node[right=2cm of BeamThread,doc,fill=blue!10]
+    (DistanceThread)
+    {Distance\\Thread};
+\node[right=2cm of DistanceThread,doc,fill=blue!10]
+    (ConsoleThread)
+    {Console\\Thread};
+\node[right=2cm of ConsoleThread,doc,fill=blue!10]
+    (DisplayThread)
+    {Display\\Thread};
+\node[right=2cm of DisplayThread,doc,fill=blue!10]
+    (LoggingThread)
+    {Logging\\Thread};
+
+% State layer nodes
+\node[below right=3cm and 2cm of BeamThread,doc,fill=red!10]
+    (DistanceState)
+    {Distance\\State\\(Mutex)};
+\node[right=2cm of DistanceState,doc,fill=red!10]
+    (LoggingState)
+    {Logging\\State\\(Mutex)};
+\node[right=2cm of LoggingState,doc,fill=red!10]
+    (SafeState)
+    {Safe\\State\\(Mutex)};
+
+
+% \draw[-latex] (ClientBundle) -- (HTML) node[midway,below,font=\small\sffamily]{Hydrate};
+% \draw (SensorThread) -- (ConsoleThread);
+
+% links between layers 1 and 2
+\draw[latex-] (ConsoleThread) -- (Console);
+\draw[latex-] (BeamThread) -- (GPIO);
+\draw[-latex] (BeamThread) -- (PWM);
+\draw[latex-latex] (DistanceThread) -- (GPIO);
+\draw[-latex] (DisplayThread) -- (GPIO);
+\draw[-latex] (LoggingThread) -- (Console);
+
+% links between layers 2 and 3
+\draw[latex-] (BeamThread) -- (DistanceState);
+\draw[-latex] (BeamThread) -- (LoggingState);
+\draw[latex-latex] (BeamThread) -- (SafeState);
+
+\draw[-latex] (DistanceThread) -- (DistanceState);
+\draw[-latex] (DistanceThread) -- (LoggingState);
+\draw[-latex] (DistanceThread) -- (SafeState);
+
+\draw[-latex] (ConsoleThread) -- (LoggingState);
+\draw[-latex] (ConsoleThread) -- (SafeState);
+
+\draw[latex-] (DisplayThread) -- (DistanceState);
+\draw[-latex] (DisplayThread) -- (LoggingState);
+\draw[latex-] (DisplayThread) -- (SafeState);
+
+\draw[latex-] (LoggingThread) -- (LoggingState);
+
+\node[draw,dashed,rounded corners,
+    fit=(GPIO)(PWM)(Console),
+    inner sep=10pt,label={left:{I/O\\Interfaces}}]
+    (fit1)
+    {};
+\node[draw,dashed,rounded corners,
+    fit=(BeamThread)(DistanceThread)(ConsoleThread),
+    inner sep=10pt,label={left:{Input\\Threads}}]
+    (fit2)
+    {};
+\node[draw,dashed,rounded corners,
+    fit=(DisplayThread)(LoggingThread),
+    inner sep=10pt,label={left:{Output\\Threads}}]
+    (fit3)
+    {};
+\node[draw,dashed,rounded corners,
+    fit=(DistanceState)(LoggingState)(SafeState),
+    inner sep=10pt,label={left:{Shared\\State}}]
+    (fit4)
+    {};
+
+\end{tikzpicture}
+\end{document}
