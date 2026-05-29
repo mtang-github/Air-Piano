@@ -153,3 +153,9 @@ Safe-state (LEDs turn off and sound is not output):
 
 Shutdown:
 - Type `q` and press Enter to stop the program cleanly.
+
+## Demo Links
+
+https://youtu.be/6kKO3OEG_N4
+
+https://youtube.com/shorts/gGBMoctYcf4?feature=share
